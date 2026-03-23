@@ -23,15 +23,10 @@ spec:
             - containerPort: 5000
           # ✔ All configMap vars removed
           # ✔ Direct env variables added
+          envFrom:
+            - configMapRef:
+                name: fitness-configmap
           env:
-            - name: MONGODB_URI
-              value: "mongodb://mongodb-service:27017/fitness-tracker"
-            - name: PORT
-              value: "5000"
-            - name: HOST
-              value: "0.0.0.0"
-            - name: NODE_ENV
-              value: "production"
             # Datadog APM (tracing) env variables
             - name: DD_AGENT_HOST
               valueFrom:
