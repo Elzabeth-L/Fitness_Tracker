@@ -29,9 +29,13 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "200m"
+        volumeMounts:
+          - name: eli-data
+            mountPath: /data/db
       volumes:
         - name: eli-data
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: "512Mi"
       
 
 ---
