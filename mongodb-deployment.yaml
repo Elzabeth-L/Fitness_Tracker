@@ -4,6 +4,11 @@ metadata:
   name: mongodb
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: mongodb
@@ -17,6 +22,17 @@ spec:
         image: mongo:7-jammy
         ports:
         - containerPort: 27017
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+        - name: eli-data
+          emptyDir: {}
+      
 
 ---
 apiVersion: v1
