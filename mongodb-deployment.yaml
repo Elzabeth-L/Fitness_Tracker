@@ -34,8 +34,8 @@ spec:
             mountPath: /data/db
       volumes:
         - name: eli-data
-          emptyDir:
-            sizeLimit: "512Mi"
+          persistentVolumeClaim:
+            claimName: mongo-pvc
       
 
 ---
