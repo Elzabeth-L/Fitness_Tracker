@@ -21,6 +21,8 @@ spec:
           [{"source":"nodejs","service":"fitness-tracker-service"},
            {"source":"nodejs","service":"fitness-tracker-app"}]
     spec:
+      nodeSelector:
+        training: "devops"
       containers:
         - name: fitness-tracker-app
           image: pulkit197/fitness_tracker-master-copy3-fitness-app:latest
@@ -33,8 +35,6 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "200m"
-          # ✔ All configMap vars removed
-          # ✔ Direct env variables added
           envFrom:
             - configMapRef:
                 name: fitness-configmap
