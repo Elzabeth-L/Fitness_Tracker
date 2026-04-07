@@ -2,7 +2,7 @@ name: Fitness Tracker CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
 
