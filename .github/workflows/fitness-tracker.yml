@@ -1,0 +1,56 @@
+name: Fitness Tracker CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Run Tests
+      run: npm test
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build-test
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Login to DockerHub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    - name: Build Docker Image
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/fitness-tracker:${{ github.sha }} .
+
+    - name: Push Docker Image
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/fitness-tracker:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker
+
+    steps:
+    - name: Setup Kubeconfig
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+
+    - name: Update Deployment Image
+      run: |
+        kubectl set image deployment/fitness-tracker \
+        fitness-tracker=${{ secrets.DOCKER_USERNAME }}/fitness-tracker:${{ github.sha }}
+
+    - name: Verify Rollout
+      run: |
+        kubectl rollout status deployment/fitness-tracker
