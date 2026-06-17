@@ -31,7 +31,7 @@ steps:
     command: 'buildAndPush'
     repository: '$(imageRepository)'
     dockerfile: '**/Dockerfile'
-    containerRegistry: 'acr-connection' //add your azure container registry connection name
+    containerRegistry: 'acr-connection' #add your azure container registry connection name
     tags: |
       $(imageTag)
       latest
@@ -41,14 +41,14 @@ steps:
   displayName: 'Deploy to AKS'
   inputs:
     action: 'deploy'
-    kubernetesServiceConnection: 'aks-connection' //add your azure  kubernetes connection name
+    kubernetesServiceConnection: 'aks-connection' #add your azure  kubernetes connection name
     namespace: default
     manifests: |
-      k8s/app-deployment.yml // add your deployment file name with file location
-      k8s/configmap.yml //     add your deployment file name with file location
-      k8s/mongodb-deployment.yaml // add your deployment file name with file location
+      k8s/app-deployment.yml 
+      k8s/configmap.yml 
+      k8s/mongodb-deployment.yaml 
     containers: |
-      elzfitness.azurecr.io/$(imageRepository):$(imageTag)    //here add your azure conatiner registry login servername
+      elzfitness.azurecr.io/$(imageRepository):$(imageTag)    
  
 # Slack Notification
 - task: Bash@3
