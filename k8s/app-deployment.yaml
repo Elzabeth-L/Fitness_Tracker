@@ -21,11 +21,12 @@ spec:
           [{"source":"nodejs","service":"fitness-tracker-service"},
            {"source":"nodejs","service":"fitness-tracker-app"}]
     spec:
-      nodeSelector:
-        training: "devops"
+      # nodeSelector:
+      #   training: "devops"
       containers:
         - name: fitness-tracker-app
-          image: elzabeth03/fitness-tracker:latest
+          #image: elzabeth03/fitness-tracker:latest
+          image: elzfitness.azurecr.io/fitnessapp:latest
           ports:
             - containerPort: 5000
           resources:
