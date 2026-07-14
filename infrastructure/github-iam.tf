@@ -1,5 +1,5 @@
 locals {
-  state_object_arn = "${aws_s3_bucket.terraform_state.arn}/${var.application_state_key}"
+  state_object_arn = "${aws_s3_bucket.terraform_state.arn}/${var.terraform_state_key}"
   lock_object_arn  = "${local.state_object_arn}.tflock"
 }
 
@@ -10,7 +10,7 @@ data "aws_iam_policy_document" "state_read" {
     condition {
       test     = "StringLike"
       variable = "s3:prefix"
-      values   = [var.application_state_key, "${var.application_state_key}.tflock"]
+      values   = [var.terraform_state_key, "${var.terraform_state_key}.tflock"]
     }
   }
 
@@ -40,6 +40,7 @@ data "aws_iam_policy_document" "plan" {
   statement {
     actions = [
       "apigateway:GET",
+      "budgets:ViewBudget",
       "dynamodb:DescribeTable",
       "dynamodb:ListTagsOfResource",
       "ecr:DescribeImages",
@@ -49,7 +50,9 @@ data "aws_iam_policy_document" "plan" {
       "ecr:ListTagsForResource",
       "iam:GetRole",
       "iam:GetRolePolicy",
+      "iam:GetOpenIDConnectProvider",
       "iam:ListAttachedRolePolicies",
+      "iam:ListOpenIDConnectProviderTags",
       "iam:ListRolePolicies",
       "lambda:GetAlias",
       "lambda:GetFunction",
@@ -58,6 +61,18 @@ data "aws_iam_policy_document" "plan" {
       "lambda:ListVersionsByFunction",
       "logs:DescribeLogGroups",
       "logs:ListTagsForResource",
+      "s3:GetBucketLocation",
+      "s3:GetBucketOwnershipControls",
+      "s3:GetBucketPolicy",
+      "s3:GetBucketPublicAccessBlock",
+      "s3:GetBucketTagging",
+      "s3:GetBucketVersioning",
+      "s3:GetEncryptionConfiguration",
+      "s3:GetLifecycleConfiguration",
+      "s3:ListBucket",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:ListSecretVersionIds",
       "sts:GetCallerIdentity"
     ]
     resources = ["*"]
@@ -74,6 +89,47 @@ data "aws_iam_policy_document" "deploy" {
   source_policy_documents = [data.aws_iam_policy_document.state_write.json]
 
   statement {
+    actions = [
+      "apigateway:GET",
+      "budgets:ViewBudget",
+      "dynamodb:DescribeTable",
+      "dynamodb:ListTagsOfResource",
+      "ecr:DescribeImages",
+      "ecr:DescribeRepositories",
+      "ecr:GetLifecyclePolicy",
+      "ecr:GetRepositoryPolicy",
+      "ecr:ListTagsForResource",
+      "iam:GetOpenIDConnectProvider",
+      "iam:GetRole",
+      "iam:GetRolePolicy",
+      "iam:ListAttachedRolePolicies",
+      "iam:ListOpenIDConnectProviderTags",
+      "iam:ListRolePolicies",
+      "lambda:GetAlias",
+      "lambda:GetFunction",
+      "lambda:GetFunctionCodeSigningConfig",
+      "lambda:GetPolicy",
+      "lambda:ListVersionsByFunction",
+      "logs:DescribeLogGroups",
+      "logs:ListTagsForResource",
+      "s3:GetBucketLocation",
+      "s3:GetBucketOwnershipControls",
+      "s3:GetBucketPolicy",
+      "s3:GetBucketPublicAccessBlock",
+      "s3:GetBucketTagging",
+      "s3:GetBucketVersioning",
+      "s3:GetEncryptionConfiguration",
+      "s3:GetLifecycleConfiguration",
+      "s3:ListBucket",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:ListSecretVersionIds",
+      "sts:GetCallerIdentity"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
     actions   = ["ecr:GetAuthorizationToken"]
     resources = ["*"]
   }
@@ -88,6 +144,11 @@ data "aws_iam_policy_document" "deploy" {
       "ecr:InitiateLayerUpload",
       "ecr:ListImages",
       "ecr:PutImage",
+      "ecr:PutImageScanningConfiguration",
+      "ecr:PutImageTagMutability",
+      "ecr:PutLifecyclePolicy",
+      "ecr:TagResource",
+      "ecr:UntagResource",
       "ecr:UploadLayerPart"
     ]
     resources = [aws_ecr_repository.application.arn]
@@ -134,6 +195,36 @@ data "aws_iam_policy_document" "deploy" {
   statement {
     actions   = ["apigateway:DELETE", "apigateway:GET", "apigateway:PATCH", "apigateway:POST", "apigateway:PUT"]
     resources = ["arn:${data.aws_partition.current.partition}:apigateway:${var.aws_region}::/apis*"]
+  }
+
+  statement {
+    actions = [
+      "budgets:ModifyBudget",
+      "budgets:ViewBudget"
+    ]
+    resources = ["arn:${data.aws_partition.current.partition}:budgets::${data.aws_caller_identity.current.account_id}:budget/${local.name_prefix}-monthly-cost"]
+  }
+
+  statement {
+    actions = [
+      "secretsmanager:DeleteSecret",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:TagResource",
+      "secretsmanager:UntagResource",
+      "secretsmanager:UpdateSecret"
+    ]
+    resources = ["arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${local.name_prefix}/*"]
+  }
+
+  statement {
+    actions = [
+      "iam:GetOpenIDConnectProvider",
+      "iam:ListOpenIDConnectProviderTags",
+      "iam:TagOpenIDConnectProvider",
+      "iam:UntagOpenIDConnectProvider",
+      "iam:UpdateOpenIDConnectProviderThumbprint"
+    ]
+    resources = ["arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"]
   }
 
   statement {

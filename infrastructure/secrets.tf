@@ -9,3 +9,10 @@ resource "aws_secretsmanager_secret" "mongodb" {
   description             = "Transitional MongoDB URI for ${local.name_prefix}; remove after DynamoDB cutover"
   recovery_window_in_days = 7
 }
+
+locals {
+  runtime_secret_arns = [
+    aws_secretsmanager_secret.jwt.arn,
+    aws_secretsmanager_secret.mongodb.arn
+  ]
+}

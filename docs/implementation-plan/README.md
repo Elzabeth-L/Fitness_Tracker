@@ -10,7 +10,7 @@ Baseline: fork `Elzabeth-L/Fitness_Tracker`, commit
 | Phase 0 | Implemented locally | Exposed key removed from current files, seed credentials removed, sensitive auth logging removed, scans pass. Provider-side Datadog key revocation remains owner action. |
 | Phase 1 | Core controls implemented locally | Password hashing, legacy hash upgrade, short-lived JWT cookie, server-side role/ownership checks, safe errors, XSS escaping, runtime secret loading, nine tests, and zero-audit dependency trees pass. Full Mongo-backed route integration tests remain. |
 | Phase 2 | Implemented locally | Express app/local/Lambda entry points split, Mongo connection cached without retry timers, Lambda Node 22 Dockerfile added, and API Gateway v2 health adapter test added. Container build remains unverified because Docker is not installed. |
-| Phase 3 | Bootstrap plan reviewed | Bootstrap and dev Terraform roots are implemented. On 2026-07-14, a root-authenticated bootstrap plan produced 17 additions, 0 changes, and 0 destroys. The bootstrap backend cycle and budget scope were corrected after review. No AWS apply has occurred. |
+| Phase 3 | Single module implemented and planned | All infrastructure is consolidated under `infrastructure/` with one state. Read-only plans on 2026-07-14 produced 25 foundation additions and 32 full-environment additions, with 0 changes and 0 destroys. `deploy_application=false` handles the first ECR dependency; CI sets it true after publishing an image. No AWS apply has occurred. |
 | Phase 7 | Implemented locally | Immutable-action PR validation and OIDC dev deployment workflows added; legacy delivery assets archived. GitHub variables/environment protection remain owner setup. |
 | Data migration | Not started | Runtime remains on transitional MongoDB. DynamoDB resources exist in Terraform, but repository/data migration must happen before MongoDB removal. |
 
@@ -112,7 +112,7 @@ pass before any public endpoint is created.
 
 Application behaves equivalently locally and through Lambda event adaptation.
 
-## Phase 3 — Bootstrap Terraform
+## Phase 3 — Single-module foundation stage
 
 ### Work
 
@@ -122,9 +122,9 @@ Application behaves equivalently locally and through Lambda event adaptation.
 - Create GitHub OIDC provider and scoped plan/deploy roles.
 - Add budget.
 - Produce non-sensitive outputs.
-- Run first bootstrap apply using a locally authenticated AWS SSO/profile.
-- Migrate bootstrap state into the new S3 backend if that operating model is
-  selected.
+- Run the first apply with `deploy_application=false` using the approved local
+  AWS identity.
+- Migrate the single local state into its new S3 backend.
 
 ### Validation
 
@@ -139,7 +139,7 @@ Application behaves equivalently locally and through Lambda event adaptation.
 Owner reviews the bootstrap plan before apply and verifies created resources
 after apply.
 
-## Phase 4 — Transitional application infrastructure
+## Phase 4 — Single-module application stage
 
 ### Work
 
@@ -220,7 +220,7 @@ Owner signs off data verification before MongoDB removal.
 
 - Implement PR validation and trusted plan behavior.
 - Implement protected `dev` deployment workflow.
-- Configure repository/environment variables from bootstrap outputs.
+- Configure repository/environment variables from foundation-stage outputs.
 - Configure GitHub environment protection.
 - Pin action revisions.
 - Implement ECR digest resolution and health verification.

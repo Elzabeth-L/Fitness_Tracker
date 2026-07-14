@@ -39,9 +39,10 @@ variable "state_bucket_name" {
   }
 }
 
-variable "application_state_key" {
-  type    = string
-  default = "fitness-tracker/dev/terraform.tfstate"
+variable "terraform_state_key" {
+  description = "Single state key for all foundational and application resources."
+  type        = string
+  default     = "fitness-tracker/terraform.tfstate"
 }
 
 variable "budget_notification_email" {

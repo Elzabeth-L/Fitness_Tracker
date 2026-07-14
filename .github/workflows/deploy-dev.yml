@@ -22,21 +22,20 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
       TF_IN_AUTOMATION: "true"
       TF_INPUT: "false"
-      TF_VAR_jwt_secret_arn: ${{ vars.JWT_SECRET_ARN }}
-      TF_VAR_mongodb_secret_arn: ${{ vars.MONGODB_SECRET_ARN }}
+      TF_VAR_budget_notification_email: ${{ vars.BUDGET_NOTIFICATION_EMAIL }}
+      TF_VAR_deploy_application: "true"
+      TF_VAR_state_bucket_name: ${{ vars.TF_STATE_BUCKET }}
     steps:
       - name: Verify required configuration
         env:
           AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          BUDGET_NOTIFICATION_EMAIL: ${{ vars.BUDGET_NOTIFICATION_EMAIL }}
           ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
-          JWT_SECRET_ARN: ${{ vars.JWT_SECRET_ARN }}
-          MONGODB_SECRET_ARN: ${{ vars.MONGODB_SECRET_ARN }}
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
         run: |
           test -n "$AWS_DEPLOY_ROLE_ARN"
+          test -n "$BUDGET_NOTIFICATION_EMAIL"
           test -n "$ECR_REPOSITORY_URL"
-          test -n "$JWT_SECRET_ARN"
-          test -n "$MONGODB_SECRET_ARN"
           test -n "$TF_STATE_BUCKET"
 
       - name: Checkout
@@ -117,13 +116,14 @@ jobs:
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
           TF_VAR_image_uri: ${{ steps.image.outputs.uri }}
         run: |
-          terraform -chdir=infrastructure/environments/dev init -backend-config="bucket=${TF_STATE_BUCKET}"
-          terraform -chdir=infrastructure/environments/dev plan -lock-timeout=5m -out=tfplan
-          terraform -chdir=infrastructure/environments/dev apply -lock-timeout=5m -auto-approve tfplan
+          cp infrastructure/backend.tf.example infrastructure/backend.tf
+          terraform -chdir=infrastructure init -backend-config="bucket=${TF_STATE_BUCKET}"
+          terraform -chdir=infrastructure plan -lock-timeout=5m -out=tfplan
+          terraform -chdir=infrastructure apply -lock-timeout=5m -auto-approve tfplan
 
       - name: Smoke test
         env:
           TF_VAR_image_uri: ${{ steps.image.outputs.uri }}
         run: |
-          health_url=$(terraform -chdir=infrastructure/environments/dev output -raw health_url)
+          health_url=$(terraform -chdir=infrastructure output -raw health_url)
           curl --fail --retry 5 --retry-all-errors --retry-delay 5 "$health_url"

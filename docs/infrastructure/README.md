@@ -4,7 +4,8 @@
 
 1. Terraform manages infrastructure; workflows orchestrate Terraform and image
    publication but do not create ad hoc application resources.
-2. Foundational resources have an independent lifecycle from the application.
+2. One Terraform root module and one state own the entire environment; a
+   staged first run handles dependencies without splitting ownership.
 3. IAM permissions are scoped by repository, branch/environment, action, and
    resource ARN where AWS supports it.
 4. The `dev` account design prioritizes bounded cost over high throughput.
@@ -15,37 +16,25 @@
 
 ```text
 infrastructure/
-├── bootstrap/
-│   ├── versions.tf
-│   ├── providers.tf
-│   ├── variables.tf
-│   ├── state.tf
-│   ├── ecr.tf
-│   ├── github-oidc.tf
-│   ├── iam.tf
-│   ├── budget.tf
-│   ├── outputs.tf
-│   └── terraform.tfvars.example
-├── modules/
-│   ├── lambda-api/
-│   ├── dynamodb/
-│   └── observability/
-└── environments/
-    └── dev/
-        ├── versions.tf
-        ├── providers.tf
-        ├── backend.tf
-        ├── main.tf
-        ├── variables.tf
-        ├── outputs.tf
-        └── terraform.tfvars.example
+├── versions.tf, providers.tf
+├── variables.tf, application-variables.tf
+├── state.tf, backend.tf.example
+├── ecr.tf, github-oidc.tf, github-iam.tf
+├── budget.tf, secrets.tf
+├── dynamodb.tf, logs.tf, lambda-iam.tf
+├── lambda.tf, api.tf
+├── outputs.tf, application-outputs.tf
+└── terraform.tfvars.example
 ```
 
-Versions are pinned, not broad floating constraints. Lock files include
-checksums for `windows_amd64` local administration and `linux_amd64` GitHub
-hosted runners.
+All `.tf` files in this directory form one root module. There are no child
+modules and no second Terraform state.
 
-## Bootstrap stack
+Versions are pinned, not broad floating constraints. A cross-platform lock file
+with `windows_amd64` and `linux_amd64` checksums remains a documented follow-up;
+the local Windows-only lock is ignored so it cannot break hosted Linux CI.
+
+## Foundation stage of the single module
 
 ### State bucket
 
@@ -68,7 +57,7 @@ Use a partial backend configuration:
 ```hcl
 terraform {
   backend "s3" {
-    key          = "fitness-tracker/dev/terraform.tfstate"
+    key          = "fitness-tracker/terraform.tfstate"
     region       = "ap-south-1"
     encrypt      = true
     use_lockfile = true
@@ -117,7 +106,7 @@ not use `AdministratorAccess`.
 #### Deployment role
 
 - Trust only the exact repository and protected `dev` environment/branch.
-- Read/write the application state object and lock object.
+- Read/write the single module state object and lock object.
 - Push images to the one ECR repository.
 - Manage named/prefixed application resources.
 - Pass only the Lambda execution role.
@@ -135,7 +124,7 @@ tag-filtered budget can miss untaggable services or costs incurred before cost
 allocation tags become active. The owner supplies the notification email. A
 budget is an alert, not an enforcement boundary.
 
-## Application stack
+## Application stage of the single module
 
 ### Lambda execution IAM
 
@@ -246,7 +235,7 @@ Do not put email addresses, secrets, or tokens in tags.
 
 ## Terraform outputs
 
-Bootstrap outputs:
+Foundation outputs from the single module:
 
 - state bucket name
 - ECR repository name and URI
@@ -255,7 +244,7 @@ Bootstrap outputs:
 - JWT secret ARN
 - transitional MongoDB secret ARN
 
-Application outputs:
+Application-stage outputs from the same module:
 
 - API base URL
 - health URL
@@ -289,15 +278,10 @@ notifications/features. Free Tier eligibility depends on account age and plan.
 
 ## Destruction boundaries
 
-Routine teardown destroys only `infrastructure/environments/dev`.
-
-Bootstrap destruction is a separate deliberate procedure performed only after:
-
-1. application stack destruction,
-2. state backup/export,
-3. ECR image retention decision,
-4. state bucket object/version review,
-5. explicit owner confirmation.
+Setting `deploy_application=false` removes only Lambda and API Gateway while
+retaining the rest of the single-module environment. Full teardown is a
+separate deliberate procedure performed only after state backup/export, data
+and secret retention decisions, ECR review, and explicit owner confirmation.
 
 Terraform may not be able to delete non-empty versioned buckets or ECR
 repositories without destructive flags. Those flags remain disabled by default.

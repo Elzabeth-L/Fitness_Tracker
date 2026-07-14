@@ -18,9 +18,10 @@
 └── deploy-dev.yml
 ```
 
-A separate bootstrap workflow is not initially recommended because the OIDC
-provider/role it would need does not exist before bootstrap. Bootstrap is run
-once from a locally authenticated AWS SSO/profile and then maintained carefully.
+The first foundation apply is local because the OIDC role and ECR repository do
+not exist yet. It runs the same module with `deploy_application=false`, then
+migrates its state to S3. Hosted workflows subsequently apply that one module
+with `deploy_application=true` and an immutable image digest.
 
 ## Existing fork pipeline assessment
 
@@ -122,7 +123,7 @@ No write permission to repository content is required.
 2. Re-run fast tests and Terraform validation.
 3. Assume the scoped deployment role through OIDC.
 4. Call STS identity and verify expected AWS account/role.
-5. Verify the bootstrap outputs/ECR repository exist; do not create them
+5. Verify the foundation-stage outputs/ECR repository exist; do not create them
    imperatively.
 6. Log Docker into ECR using the short-lived role session.
 7. Build for `linux/amd64` with `--provenance=false`.
@@ -201,12 +202,10 @@ Suggested non-secret repository/environment variables:
 - `AWS_DEPLOY_ROLE_ARN`
 - `ECR_REPOSITORY_URL`
 - `TF_STATE_BUCKET`
-- `JWT_SECRET_ARN`
-- `MONGODB_SECRET_ARN`
-
-The ARN variables are identifiers, not secret values. MongoDB URI and JWT key
-values never flow through GitHub Actions. No AWS access key is stored in
-GitHub.
+- `BUDGET_NOTIFICATION_EMAIL`
+Secret containers and their ARNs are owned by the single Terraform module.
+MongoDB URI and JWT key values never flow through GitHub Actions. No AWS access
+key is stored in GitHub.
 
 ## Rollback
 

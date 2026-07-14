@@ -7,61 +7,62 @@ names must be finalized and tested during implementation before production use.
 
 The current owner-approved exception uses the AWS root session for the one-time
 local bootstrap only. Root credentials must never be placed in GitHub or used
-by routine deployments; the bootstrap-created GitHub OIDC roles are the
+by routine deployments; the first-stage-created GitHub OIDC roles are the
 automation identities.
 
 1. Authenticate the local AWS CLI using an approved short-lived profile such as
    AWS SSO; do not create an IAM access key for automation.
 2. Confirm identity and account before planning.
-3. Run formatting, initialization, validation, and plan in
-   `infrastructure/bootstrap`.
+3. Run formatting, initialization, validation, and plan in `infrastructure/`
+   with `deploy_application=false`.
 4. Review account, region, bucket name, ECR, OIDC trust conditions, IAM policy,
    budget email/amount, and tags.
 5. Apply only the reviewed plan.
-6. Populate the bootstrap-created `jwt` and transitional `mongodb` secret
+6. Populate the module-created `jwt` and transitional `mongodb` secret
    values through the AWS console or another approved secret-entry mechanism.
    Never put the values in Terraform, GitHub variables, shell history, or this
    repository. The JWT key must contain at least 32 random characters; the
    MongoDB secret may be a raw URI or JSON with `MONGODB_URI`.
 7. Record non-sensitive outputs in GitHub repository/environment variables.
-8. Migrate bootstrap state to S3 according to the implemented backend process.
+8. Migrate the single module state to S3 according to the implemented backend
+   process.
 9. Confirm the local state file is no longer the active source of truth and
    dispose of redundant copies securely after verification.
 
 Required GitHub `dev` environment/repository variables are `AWS_REGION`,
 `AWS_PLAN_ROLE_ARN`, `AWS_DEPLOY_ROLE_ARN`, `ECR_REPOSITORY_URL`,
-`TF_STATE_BUCKET`, `JWT_SECRET_ARN`, and `MONGODB_SECRET_ARN`. The last two are
-ARNs only, never secret values.
+`TF_STATE_BUCKET`, and `BUDGET_NOTIFICATION_EMAIL`. Secret ARNs are module-owned
+outputs and are not GitHub variables; secret values never enter GitHub.
 
-### Bootstrap command sequence
+### First-stage command sequence
 
 After `aws login` succeeds, create an ignored
-`infrastructure/bootstrap/terraform.tfvars` from the example and replace its
+`infrastructure/terraform.tfvars` from the example and replace its
 two placeholders. Then run:
 
 ```powershell
-terraform -chdir=infrastructure/bootstrap init -backend=false
-terraform -chdir=infrastructure/bootstrap fmt -check
-terraform -chdir=infrastructure/bootstrap validate
-terraform -chdir=infrastructure/bootstrap plan -out=bootstrap.tfplan
-terraform -chdir=infrastructure/bootstrap apply bootstrap.tfplan
+terraform -chdir=infrastructure init -backend=false
+terraform -chdir=infrastructure fmt -check
+terraform -chdir=infrastructure validate
+terraform -chdir=infrastructure plan -out=foundation.tfplan
+terraform -chdir=infrastructure apply foundation.tfplan
 ```
 
-Read the output bucket name, then migrate bootstrap state into that newly
+Read the output bucket name, then migrate the single state into that newly
 created bucket:
 
 ```powershell
-Copy-Item infrastructure/bootstrap/backend.tf.example infrastructure/bootstrap/backend.tf
-terraform -chdir=infrastructure/bootstrap init -migrate-state -backend-config="bucket=REPLACE_WITH_OUTPUT_BUCKET"
+Copy-Item infrastructure/backend.tf.example infrastructure/backend.tf
+terraform -chdir=infrastructure init -migrate-state -backend-config="bucket=REPLACE_WITH_OUTPUT_BUCKET"
 ```
 
 `backend.tf` is intentionally ignored. The committed template avoids the
-bootstrap cycle where Terraform would try to initialize a bucket before the
+creation cycle where Terraform would try to initialize a bucket before the
 first local-state apply has created it.
 
-Do not run application apply until both secret values are populated and all
-seven GitHub variables are configured. The normal deployment workflow then
-builds/pushes the first image and supplies its digest to the application stack.
+Do not set `deploy_application=true` until both secret values are populated and
+the six GitHub variables are configured. The normal deployment workflow then
+builds/pushes the first image and applies the same module with its digest.
 
 ## Normal deployment
 
@@ -211,28 +212,25 @@ Monthly or after meaningful changes:
 - verify repository secret scanning,
 - confirm legacy deployment paths remain clearly unsupported.
 
-## Destroy application environment
+## Disable the application tier
 
 1. Confirm this is `dev` and record owner approval.
-2. Back up data if retention is required.
-3. Confirm the Terraform workspace/backend key.
-4. Run and review `terraform plan -destroy` for application state only.
-5. Apply the reviewed destroy plan.
-6. Verify API, Lambda, log groups, and DynamoDB resources are removed as
-   intended.
-7. Leave bootstrap state bucket, OIDC roles, ECR, and budget intact unless a
-   separate bootstrap teardown is approved.
+2. Set `deploy_application=false` in a reviewed plan.
+3. Verify that only Lambda, its alias/permission, and API Gateway resources are
+   removed. DynamoDB, logs, secrets, ECR, IAM, budget, and state remain.
+4. Apply and verify the public endpoint is gone.
 
-## Destroy bootstrap
+## Destroy the entire single-module environment
 
-Bootstrap teardown is exceptional:
+Full teardown is exceptional:
 
-1. Destroy application environments first.
-2. Export/retain required state and images.
+1. Disable the application tier first.
+2. Export/retain required state, data, secrets, and images.
 3. Remove GitHub variables that reference roles/resources.
 4. Review all bucket object versions and ECR images.
 5. Obtain explicit owner approval for permanent deletion.
-6. Handle non-empty protected resources deliberately.
+6. Migrate state away from the bucket being destroyed and deliberately address
+   `prevent_destroy` and non-empty-resource protections in a reviewed change.
 7. Verify no other repository/environment depends on the OIDC provider or
    shared resources.
 

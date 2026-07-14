@@ -18,8 +18,8 @@ terraform.tfvars
 *.auto.tfvars
 # Temporary until a verified Windows+Linux provider lock can be generated.
 infrastructure/**/.terraform.lock.hcl
-# Activated locally from backend.tf.example after bootstrap creates the bucket.
-infrastructure/bootstrap/backend.tf
+# Activated locally from backend.tf.example after the first stage creates the bucket.
+infrastructure/backend.tf
 
 # Test and runtime output
 coverage/

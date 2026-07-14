@@ -16,11 +16,11 @@ consequences, and the condition under which it should be revisited. Status is
 | D004 | Use separate DynamoDB tables | Proposed |
 | D005 | Migrate MongoDB in controlled stages | Proposed |
 | D006 | Keep Lambda outside a customer VPC | Proposed |
-| D007 | Create ECR in the bootstrap stack | Proposed |
+| D007 | Create ECR in the first stage of the single module | Implemented |
 | D008 | Deploy immutable Git SHA tags and ECR digests | Proposed |
 | D009 | Authenticate GitHub Actions through OIDC | Proposed |
 | D010 | Use S3 native Terraform state locking | Proposed |
-| D011 | Separate bootstrap and application state | Proposed |
+| D011 | Use one root module and one Terraform state | Implemented |
 | D012 | Keep secrets out of Terraform values and state | Proposed |
 | D013 | Apply strict dev cost guardrails | Proposed |
 | D014 | Preserve legacy deployment assets | Proposed |
@@ -141,19 +141,20 @@ MongoDB Atlas access uses public egress with non-static addresses.
 **Revisit when:** A private database/service is required and the cost of VPC
 endpoints or controlled egress is accepted.
 
-## D007 — Create ECR in the bootstrap stack
+## D007 — Create ECR in the first stage of the single module
 
-**Decision:** Provision ECR before the application stack.
+**Decision:** Provision ECR with `deploy_application=false` before enabling the
+Lambda/API resources in the same module.
 
 **Alternatives:** Create ECR in the application stack or imperatively in the
 deployment workflow.
 
 **Justification:** Lambda creation requires an existing image, and an image push
-requires an existing repository. Bootstrap resolves this dependency cleanly
-and keeps ECR lifecycle/permissions under Terraform.
+requires an existing repository. A boolean stage gate resolves this dependency
+while keeping every resource in one module and state.
 
-**Consequences:** Bootstrap is a required one-time prerequisite. Deployments
-must fail clearly if it has not run.
+**Consequences:** A foundation-only first apply is required. Later deployments
+set `deploy_application=true` and apply the same state.
 
 **Revisit when:** A central platform account owns shared registries.
 
@@ -185,7 +186,7 @@ deployments.
 AWS keys from GitHub. Trust can be restricted to the repository, branch, and
 protected GitHub environment.
 
-**Consequences:** Bootstrap must create the provider/roles. Workflows need
+**Consequences:** The first module stage must create the provider/roles. Workflows need
 `id-token: write`; trust policy conditions and environment protection are
 security-critical.
 
@@ -207,20 +208,21 @@ permission. The backend bucket must be created before backend migration.
 
 **Revisit when:** Moving to an organization-managed Terraform platform.
 
-## D011 — Separate bootstrap and application state
+## D011 — Use one root module and one Terraform state
 
-**Decision:** Maintain independent bootstrap and `dev` application states.
+**Decision:** Place all foundational and application resources in the single
+root module at `infrastructure/` and use one state key.
 
-**Alternatives:** One state containing state storage, OIDC, ECR, and application
-resources.
+**Alternatives:** Separate foundation/application roots and states, or child
+modules called by several roots.
 
-**Justification:** The state bucket and deployment identity have a different
-lifecycle and must survive routine application destruction. Separation reduces
-blast radius and circular dependencies.
+**Justification:** The project requirement is one module for the entire
+environment. `deploy_application` handles the image dependency, while an
+inactive backend template handles state-bucket creation without another root.
 
-**Consequences:** Bootstrap requires a one-time local-state apply followed by
-state migration. Its committed backend is a template activated locally only
-after the state bucket exists. Destroy operations must be ordered.
+**Consequences:** The first apply uses local state, followed by migration to S3.
+Foundational and application changes share blast radius, so targeted teardown
+is not the normal operating model.
 
 **Revisit when:** A central platform provisions foundational resources.
 
@@ -353,11 +355,10 @@ is pinned but CI generates its platform lock during initialization.
 **Revisit when:** The runner model or organization Terraform distribution policy
 changes.
 
-## D019 — Keep secret containers in bootstrap state
+## D019 — Keep secret containers in the single module state
 
-**Decision:** Bootstrap creates the JWT and transitional MongoDB Secrets
-Manager containers. The application stack receives only their ARNs and the
-Lambda execution role can read only those ARNs.
+**Decision:** The single module creates the JWT and transitional MongoDB Secrets
+Manager containers, and the Lambda execution role can read only their ARNs.
 
 **Alternatives:** Create secrets in the application stack, place plaintext in
 Lambda environment variables, or put secret values in Terraform resources.
@@ -367,8 +368,8 @@ Lambda smoke test. Keeping them foundational also preserves credentials during
 routine application teardown, while excluding values from Terraform prevents
 their inclusion in state.
 
-**Consequences:** Bootstrap has a slightly broader lifecycle. Secret value
-creation and rotation is a separate owner operation, and destroying bootstrap
+**Consequences:** Secret value creation and rotation is a separate owner
+operation. A full module destroy includes secret containers and therefore
 requires an explicit credential-retention decision.
 
 **Revisit when:** Cognito replaces custom JWT signing and DynamoDB cutover
