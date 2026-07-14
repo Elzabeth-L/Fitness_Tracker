@@ -188,7 +188,10 @@ protected GitHub environment.
 
 **Consequences:** The first module stage must create the provider/roles. Workflows need
 `id-token: write`; trust policy conditions and environment protection are
-security-critical.
+security-critical. AWS normalizes the provider certificate thumbprint after
+creation, so Terraform ignores drift only for `thumbprint_list` to prevent a
+perpetual plan. Terraform still manages the provider URL, audience, exact
+repository subjects, and role trust policies.
 
 **Revisit when:** Organization-wide identity and deployment roles are provided.
 

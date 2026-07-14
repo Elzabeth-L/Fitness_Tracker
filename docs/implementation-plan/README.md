@@ -10,14 +10,12 @@ Baseline: fork `Elzabeth-L/Fitness_Tracker`, commit
 | Phase 0 | Implemented locally | Exposed key removed from current files, seed credentials removed, sensitive auth logging removed, scans pass. Provider-side Datadog key revocation remains owner action. |
 | Phase 1 | Core controls implemented locally | Password hashing, legacy hash upgrade, short-lived JWT cookie, server-side role/ownership checks, safe errors, XSS escaping, runtime secret loading, nine tests, and zero-audit dependency trees pass. Full Mongo-backed route integration tests remain. |
 | Phase 2 | Implemented locally | Express app/local/Lambda entry points split, Mongo connection cached without retry timers, Lambda Node 22 Dockerfile added, and API Gateway v2 health adapter test added. Container build remains unverified because Docker is not installed. |
-| Phase 3 | Single module implemented and planned | All infrastructure is consolidated under `infrastructure/` with one state. Read-only plans on 2026-07-14 produced 25 foundation additions and 32 full-environment additions, with 0 changes and 0 destroys. `deploy_application=false` handles the first ECR dependency; CI sets it true after publishing an image. No AWS apply has occurred. |
-| Phase 7 | Implemented locally | Immutable-action PR validation and OIDC dev deployment workflows added; legacy delivery assets archived. GitHub variables/environment protection remain owner setup. |
+| Phase 3 | Foundation applied; remote state active | All infrastructure is consolidated under `infrastructure/` with one state. On 2026-07-14 the reviewed foundation plan created 25 AWS resources with `deploy_application=false`; the resulting state was migrated to encrypted, versioned S3 with native locking and verified by a zero-change plan. Application Lambda/API resources remain gated until secrets and GitHub settings are ready. |
+| Phase 7 | PR open; owner setup pending | Immutable-action PR validation and OIDC dev deployment workflows are in PR #4; validation passes and the plan job is intentionally skipped until GitHub variables/environment protection are configured. |
 | Data migration | Not started | Runtime remains on transitional MongoDB. DynamoDB resources exist in Terraform, but repository/data migration must happen before MongoDB removal. |
 
-Git and a system Node installation are unavailable. Tests currently run with
-portable Node.js 22.23.1 from a temporary directory; Git must be installed
-before these local changes can be committed or pushed. Docker is also absent,
-so image construction is delegated to GitHub Actions until it is installed.
+Git is installed and the migration branch is pushed in PR #4. Docker remains
+absent locally, so image construction is delegated to GitHub Actions.
 
 ## Planning principles
 
@@ -25,7 +23,8 @@ so image construction is delegated to GitHub Actions until it is installed.
 - Do not combine the Lambda adaptation and DynamoDB rewrite into one untestable
   change.
 - Every phase has entry criteria, deliverables, validation, and an approval gate.
-- No AWS apply occurs until bootstrap and cost/security settings are reviewed.
+- No application apply occurs until secrets, remote state, GitHub variables,
+  environment protection, and the deployment plan are reviewed.
 - Do not delete legacy deployment files.
 
 ## Phase 0 — Establish source and contain exposed credentials

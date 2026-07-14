@@ -5,6 +5,13 @@ names must be finalized and tested during implementation before production use.
 
 ## One-time bootstrap
 
+Bootstrap status on 2026-07-14: the reviewed foundation plan created 25
+resources with `deploy_application=false`, including the state bucket, budget,
+ECR repository, DynamoDB tables, log groups, secret containers, and GitHub OIDC
+roles. The state was migrated to encrypted, versioned S3 and verified with a
+zero-change remote-backend plan. Secret values and GitHub
+variables/environment protection remain required before PR #4 is merged.
+
 The current owner-approved exception uses the AWS root session for the one-time
 local bootstrap only. Root credentials must never be placed in GitHub or used
 by routine deployments; the first-stage-created GitHub OIDC roles are the
