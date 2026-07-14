@@ -20,6 +20,17 @@ data "aws_iam_policy_document" "state_read" {
   }
 }
 
+data "aws_iam_policy_document" "state_read_with_lock" {
+  source_policy_documents = [data.aws_iam_policy_document.state_read.json]
+
+  # A read-only Terraform plan still acquires the native S3 lock. Permit the
+  # plan role to mutate only the lock object, never the state object itself.
+  statement {
+    actions   = ["s3:PutObject", "s3:DeleteObject"]
+    resources = [local.lock_object_arn]
+  }
+}
+
 data "aws_iam_policy_document" "state_write" {
   source_policy_documents = [data.aws_iam_policy_document.state_read.json]
 
@@ -35,7 +46,7 @@ data "aws_iam_policy_document" "state_write" {
 }
 
 data "aws_iam_policy_document" "plan" {
-  source_policy_documents = [data.aws_iam_policy_document.state_read.json]
+  source_policy_documents = [data.aws_iam_policy_document.state_read_with_lock.json]
 
   statement {
     actions = [

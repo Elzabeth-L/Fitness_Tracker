@@ -206,6 +206,11 @@ another remote backend.
 version and avoids a lock table whose mechanism is deprecated. Bucket versioning
 supports recovery from accidental state changes.
 
+**Least-privilege detail:** Terraform plans also acquire the native `.tflock`
+object. The GitHub plan role may create and delete only that lock object; it may
+read but cannot write the Terraform state object. The deployment role can write
+both state and lock objects.
+
 **Consequences:** The deployment role needs narrowly scoped lock-object delete
 permission. The backend bucket must be created before backend migration.
 

@@ -11,6 +11,9 @@ ECR repository, DynamoDB tables, log groups, secret containers, and GitHub OIDC
 roles. The state was migrated to encrypted, versioned S3 and verified with a
 zero-change remote-backend plan. Secret values and GitHub
 variables/environment protection remain required before PR #4 is merged.
+The JWT secret has an owner-unknown random value stored as `AWSCURRENT`; the
+transitional MongoDB URI remains owner input and must not be pasted into chat or
+committed to source.
 
 The current owner-approved exception uses the AWS root session for the one-time
 local bootstrap only. Root credentials must never be placed in GitHub or used
