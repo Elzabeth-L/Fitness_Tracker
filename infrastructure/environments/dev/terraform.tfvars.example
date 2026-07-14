@@ -1,0 +1,5 @@
+image_uri = "123456789012.dkr.ecr.ap-south-1.amazonaws.com/fitness-tracker-dev@sha256:REPLACE_WITH_64_HEX_CHARACTERS"
+
+# Bootstrap outputs; these are identifiers, not secret values.
+jwt_secret_arn     = "arn:aws:secretsmanager:ap-south-1:123456789012:secret:fitness-tracker-dev/jwt-xxxxxx"
+mongodb_secret_arn = "arn:aws:secretsmanager:ap-south-1:123456789012:secret:fitness-tracker-dev/mongodb-xxxxxx"

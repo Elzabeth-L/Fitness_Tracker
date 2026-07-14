@@ -1,3 +1,5 @@
+# Archived 2026-07-14. This workflow is intentionally inactive and retained for
+# traceability; the maintained workflows live in .github/workflows.
 name: Fitness Tracker CI/CD
 
 on:

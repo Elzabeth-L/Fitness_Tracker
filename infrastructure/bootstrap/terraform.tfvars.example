@@ -1,0 +1,3 @@
+state_bucket_name         = "REPLACE-WITH-GLOBALLY-UNIQUE-BUCKET-NAME"
+budget_notification_email = "REPLACE-WITH-YOUR-EMAIL"
+monthly_budget_usd        = 5
